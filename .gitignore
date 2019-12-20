@@ -1,0 +1,6 @@
+/target/*
+!/target/.gitkeep
+.classpath
+.project
+.settings
+

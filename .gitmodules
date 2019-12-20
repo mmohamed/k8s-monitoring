@@ -1,0 +1,9 @@
+[submodule "core"]
+	path = core
+	url = https://github.com/mmohamed/k8s-monitoring-core.git
+[submodule "service"]
+	path = service
+	url = https://github.com/mmohamed/k8s-monitoring-service.git
+[submodule "webapp"]
+	path = webapp
+	url = https://github.com/mmohamed/k8s-monitoring-webapp.git
