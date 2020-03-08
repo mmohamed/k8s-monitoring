@@ -67,7 +67,7 @@ spec:
             - containerPort: 8080
           readinessProbe:
             httpGet:
-              path: /health
+              path: /k8s/actuator/health
               port: 8080
             initialDelaySeconds: 60
             timeoutSeconds: 2
@@ -75,7 +75,7 @@ spec:
             failureThreshold: 1
           livenessProbe:
             httpGet:
-              path: /health
+              path: /k8s/actuator/health
               port: 8080
             initialDelaySeconds: 300
             timeoutSeconds: 5
