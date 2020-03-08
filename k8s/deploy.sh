@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 if [ -z "$CRT" ] || [ -z "$KEY" ]; then
