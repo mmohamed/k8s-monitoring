@@ -172,6 +172,7 @@ spec:
         - while true; do
             TEMP=$(cat /sys/class/thermal/thermal_zone0/temp);
             URL="$SERVER?node=$NODE&value=$TEMP";
+			echo $URL;
             wget -qO- $URL;
             sleep 5;
           done;
