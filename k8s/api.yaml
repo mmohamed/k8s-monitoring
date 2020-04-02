@@ -10,7 +10,6 @@ kind: Secret
 metadata:
   name: monitoring-tls
   namespace: monitoring
-type: Opaque  
 data:
   tls.crt: {{crt}}
   tls.key: {{key}}
@@ -74,9 +73,9 @@ spec:
         - name: api
           image: medinvention/k8s-monitoring-api:arm
           imagePullPolicy: Always
-		  env:
-			- name: COLLECTOR_TOKEN
-			  valueFrom:
+          env:
+            - name: COLLECTOR_TOKEN
+              valueFrom:
                 secretKeyRef:
                   name: monitoring-token
                   key: security.token
@@ -151,12 +150,13 @@ spec:
     metadata:
       labels:
         name: monitoring-agent
+        commit: '{{commit}}'
     spec:
       tolerations:
       # this toleration is to have the daemonset runnable on master nodes
       # remove it if your masters can't run pods
-      - key: node-role.kubernetes.io/master
-        effect: NoSchedule
+      #- key: node-role.kubernetes.io/master
+      #  effect: NoSchedule
       containers:
       - name: monitoring-agent
         image: busybox
@@ -172,7 +172,6 @@ spec:
         - while true; do
             TEMP=$(cat /sys/class/thermal/thermal_zone0/temp);
             URL="$SERVER?node=$NODE&value=$TEMP";
-			echo $URL;
             wget -qO- $URL;
             sleep 5;
           done;
