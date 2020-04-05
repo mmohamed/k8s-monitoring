@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 if [ -z "$CRT" ] || [ -z "$KEY" ]; then
 	echo "TLS CRT/KEY environment value not found !"
@@ -28,7 +28,7 @@ fi
 
 echo "Deploy for CommitID : ${commitID}"
 
-ENCODEDCOLLECTORTOKEN=$(echo -ne $COLLECTORTOKEN | base64)
+ENCODEDCOLLECTORTOKEN=$(echo -n $COLLECTORTOKEN | base64)
 # create new deploy
 sed -i "s|{{crt}}|`echo $CRT`|g" api.yaml
 sed -i "s|{{key}}|`echo $KEY`|g" api.yaml
