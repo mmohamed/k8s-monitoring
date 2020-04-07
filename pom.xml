@@ -16,7 +16,7 @@
 		<maven.npm.plugin.version>1.8.0</maven.npm.plugin.version>
 		<maven.resources.plugin.version>3.0.1</maven.resources.plugin.version>
 		<maven.compiler.source>1.6</maven.compiler.source>
-    		<maven.compiler.target>1.6</maven.compiler.target>
+		<maven.compiler.target>1.6</maven.compiler.target>
 		<node.version>v12.13.1</node.version>
 		<npm.version>6.12.1</npm.version>
 	</properties>
@@ -27,6 +27,14 @@
 		<module>webapp</module>
 	</modules>
 
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+	
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
@@ -38,5 +46,5 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
-	
+
 </project>
