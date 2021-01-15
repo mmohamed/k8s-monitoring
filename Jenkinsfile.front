@@ -27,7 +27,7 @@ pipeline {
             sh 'export NODE_OPTIONS="--max_old_space_size=256"'
             sh 'export REACT_APP_URL_BASE="https://api-monitoring.medinvention.dev/k8s"'
             sh 'export PATH=$PATH:$NODEJS_HOME/bin'
-            sh 'npm install && npm run-script build'
+            sh 'cd webapp/src/main/app && npm install && npm run-script build'
          }
       }
 
