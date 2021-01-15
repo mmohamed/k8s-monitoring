@@ -1,0 +1,116 @@
+pipeline {
+   agent {
+       label  'east'
+   }
+
+   tools {
+      maven "AutoMaven"
+      nodejs "AutoNode"
+   }
+ 
+   stages {
+      stage('Build') {
+         steps {
+            //checkout
+            checkout([$class: 'GitSCM',
+                branches: [[name: '*/dev']],
+                doGenerateSubmoduleConfigurations: false,
+                extensions: [[$class: 'SubmoduleOption',
+                              disableSubmodules: false,
+                              parentCredentials: false,
+                              recursiveSubmodules: true,
+                              reference: '',
+                              trackingSubmodules: false]], 
+                submoduleCfg: [], 
+                userRemoteConfigs: [[url: 'https://github.com/mmohamed/k8s-monitoring.git']]])
+            // Package
+            sh 'mkdir -p $NODEJS_HOME/node'
+            sh 'cp -n $NODEJS_HOME/bin/node $NODEJS_HOME/node'
+            sh 'cp -rn $NODEJS_HOME/lib/node_modules $NODEJS_HOME/node'
+            sh 'ln -sfn $NODEJS_HOME/lib/node_modules/npm/bin/npm-cli.js $NODEJS_HOME/node/npm'
+            sh 'ln -sfn $NODEJS_HOME/lib/node_modules/npm/bin/npx-cli.js $NODEJS_HOME/node/npx'
+            sh 'export NODE_OPTIONS="--max_old_space_size=256" && export REACT_APP_URL_BASE="https://api-monitoring.medinvention.dev/k8s" && export PATH=$PATH:$NODEJS_HOME/bin && export NODE_PATH=$NODEJS_HOME && mvn install -P skip-node'
+            // Copy artifact to Docker build workspace
+            sh 'mkdir -p ./service/target/dependency && (cd service/target/dependency; jar -xf ../*.jar) && cd ../..'  
+            sh 'mkdir -p ./service/target/_site && cp -r ./webapp/target/classes/static/* service/target/_site'   
+         }
+      }
+
+
+      stage('Prepare Workspace'){
+         steps{
+            // Prepare Docker workspace
+            withCredentials([sshUserPrivateKey(credentialsId: "SSHMaster", keyFileVariable: 'keyfile')]) {
+                sh "ssh -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${keyfile} pirate@192.168.1.86 'mkdir -p ~/s2i-k8S/k8s-monitoring-$BUILD_NUMBER'"
+                sh "scp -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${keyfile} -r service/target pirate@192.168.1.86:/home/pirate/s2i-k8S/k8s-monitoring-$BUILD_NUMBER"
+            }
+            // Create Dockerfile for api
+            writeFile file: "./Dockerfile.api", text: '''
+FROM arm32v7/openjdk:8-jdk 
+ARG user=spring
+ARG group=spring
+ARG uid=1000
+ARG gid=1000
+RUN groupadd -g ${gid} ${group} && useradd -u ${uid} -g ${gid} -m -s /bin/bash ${user}
+ARG DEPENDENCY=target/dependency
+COPY --chown=spring:spring ${DEPENDENCY}/BOOT-INF/lib /var/app/lib
+COPY --chown=spring:spring ${DEPENDENCY}/META-INF /var/app/META-INF
+COPY --chown=spring:spring ${DEPENDENCY}/BOOT-INF/classes /var/app
+USER ${user}
+ENTRYPOINT ["java","-cp","var/app:var/app/lib/*","dev.medinvention.service.Application"]'''
+            // Create Dockerfile for front
+            writeFile file: "./Dockerfile.front", text: '''
+FROM nginx
+EXPOSE 80
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY target/_site/ /usr/share/nginx/html'''
+            // Create Dockerfile for front
+            writeFile file: "./nginx.conf", text: '''
+server {
+    listen       80;
+    server_name  localhost;
+    location / {
+        root   /usr/share/nginx/html;
+        try_files $uri /index.html;
+    }
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }    
+}'''
+            // copy docker file
+            withCredentials([sshUserPrivateKey(credentialsId: "SSHMaster", keyFileVariable: 'keyfile')]) {
+                sh "scp -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${keyfile} Dockerfile.api pirate@192.168.1.86:/home/pirate/s2i-k8S/k8s-monitoring-$BUILD_NUMBER"
+                sh "scp -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${keyfile} Dockerfile.front pirate@192.168.1.86:/home/pirate/s2i-k8S/k8s-monitoring-$BUILD_NUMBER"
+                sh "scp -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${keyfile} nginx.conf pirate@192.168.1.86:/home/pirate/s2i-k8S/k8s-monitoring-$BUILD_NUMBER"
+            }
+         }
+      }
+
+      stage('Docker build'){
+         steps{
+            withCredentials([sshUserPrivateKey(credentialsId: "SSHMaster", keyFileVariable: 'keyfile')]) {
+               sh "ssh -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${keyfile} pirate@192.168.1.86 'docker build ~/s2i-k8S/k8s-monitoring-$BUILD_NUMBER -f ~/s2i-k8S/k8s-monitoring-$BUILD_NUMBER/Dockerfile.api -t medinvention/k8s-monitoring-api:arm'"
+               sh "ssh -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${keyfile} pirate@192.168.1.86 'docker push medinvention/k8s-monitoring-api:arm'"
+               sh "ssh -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${keyfile} pirate@192.168.1.86 'docker rmi medinvention/k8s-monitoring-api:arm'"
+               sh "ssh -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${keyfile} pirate@192.168.1.86 'docker build ~/s2i-k8S/k8s-monitoring-$BUILD_NUMBER -f ~/s2i-k8S/k8s-monitoring-$BUILD_NUMBER/Dockerfile.front -t medinvention/k8s-monitoring-front:arm'"
+               sh "ssh -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${keyfile} pirate@192.168.1.86 'docker push medinvention/k8s-monitoring-front:arm'"
+               sh "ssh -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${keyfile} pirate@192.168.1.86 'docker rmi medinvention/k8s-monitoring-front:arm'"
+            }
+         }
+      }
+
+      stage('Kubernetes deploy'){
+         steps{
+            // deploy
+            withCredentials([string(credentialsId: 'KubeToken', variable: 'TOKEN'),
+                  string(credentialsId: 'TLSKey', variable: 'KEY'),
+                  string(credentialsId: 'TLSCrt', variable: 'CRT')
+               ]) {
+               sh "export TOKEN=$TOKEN && export CRT=$CRT && export KEY=$KEY"
+               sh "cd k8s && COLLECTORTOKEN='securitytoken' sh deploy.sh"
+            }  
+         }
+      }
+   }
+}

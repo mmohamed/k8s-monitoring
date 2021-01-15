@@ -1,0 +1,7 @@
+FROM nginx
+
+EXPOSE 80
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+COPY target/_site/ /usr/share/nginx/html
