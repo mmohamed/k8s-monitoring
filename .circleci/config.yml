@@ -13,7 +13,8 @@ jobs:
       - image: cimg/openjdk:11.0
     steps:
       # Checkout the code as the first step.
-      - run: git clone  --recurse-submodules --depth 5 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_BRANCH"
+      - checkout
+      - run: git submodule sync --recursive && git submodule update --recursive --init
       # Use mvn clean and package as the standard maven build phase
       - run:
           name: Build
