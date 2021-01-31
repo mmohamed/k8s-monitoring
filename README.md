@@ -1,5 +1,7 @@
 # Kubernetes Monitoring App for Raspberry
 
+[![CircleCI](https://circleci.com/gh/mmohamed/k8s-monitoring.svg?style=svg)](https://circleci.com/gh/mmohamed/k8s-monitoring)
+
 Goal is to deploy a simple application for cluster resources monitoring. Target resources will be CPU charge, Memory consuming, CPU temperature and pods state like in Top view on Linux system.
 
 ##### [@See for full description](https://blog.medinvention.dev/k8s-cpu-temperature-fan-monitoring-for-rpi/)
