@@ -22,7 +22,7 @@ jobs:
       # Then run your tests!
       - run:
           name: Test
-          command: mvn test
+          command: mvn test -P full-install
 
 workflows:
   # Below is the definition of your workflow.
