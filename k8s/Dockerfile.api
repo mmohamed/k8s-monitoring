@@ -1,4 +1,6 @@
-FROM arm32v7/openjdk:8-jdk 
+ARG ARCH=arm32v7
+
+FROM ${ARCH}/openjdk:8-jdk
 
 ARG user=spring
 ARG group=spring
